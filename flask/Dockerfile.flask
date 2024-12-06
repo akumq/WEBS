@@ -1,0 +1,15 @@
+FROM arm64v8/python:latest
+WORKDIR /app
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY .env .env
+RUN [ ! -f .env ] || export $(grep -v '^#' .env | xargs)
+
+COPY run.sh .
+
+COPY . .
+CMD ["/bin/bash", "run.sh"]
+# CMD ["ls", "-l","-a"]
+# CMD ["python3", "-m", "flask", "run", "--host", "${HOST}", "--port", "${PORT}"]

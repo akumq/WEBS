@@ -1,0 +1,19 @@
+services:
+  cpp_app:
+    build:
+      context: .
+      dockerfile: Dockerfile.cpp
+    volumes:
+      - ./sensor:/app/sensor
+    command: ["./daemon", "1", "2"]  # Exemple de commande avec des arguments
+
+  flask_app:
+    build:
+      context: ./flask
+      dockerfile: Dockerfile.flask
+    ports:
+      - "8050:8050"
+    env_file:
+      - flask/.env
+    volumes:
+      - ./flask/src:/app/src
