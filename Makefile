@@ -1,7 +1,7 @@
 CROSS_COMPILE ?=
 CC      = $(CROSS_COMPILE)gcc
 CFLAGS  = -Wall -g -pthread
-LDFLAGS   = -pthread 
+LDFLAGS   = -pthread
 LOADLIBES = -lrt -lm
 
 EXERCISES=		\
@@ -11,7 +11,6 @@ daemon			\
 all : ${EXERCISES}
 
 .PHONY: clean
-clean : 
+clean :
 	@rm -f core *.o *.out *.bb *.bbg *.gcov *.da *~
 	@rm -f ${EXERCISES}
-

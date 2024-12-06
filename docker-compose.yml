@@ -4,7 +4,7 @@ services:
       context: .
       dockerfile: Dockerfile.cpp
     volumes:
-      - ./sensor:/app/sensor
+      - cpp:/app/cpp
     command: ["./daemon", "1", "2"]  # Exemple de commande avec des arguments
 
   flask_app:
@@ -17,3 +17,10 @@ services:
       - flask/.env
     volumes:
       - ./flask/src:/app/src
+      - cpp:/app/cpp
+    depends_on:
+      - cpp_app
+    command: ["/bin/bash", "run.sh"]
+
+volumes:
+  cpp:

@@ -13,7 +13,7 @@
 #include <algorithm>
 #include <unistd.h>
 #include <csignal>
-#include <cstring>  // Ajoutez cette ligne pour inclure cstring
+#include <cstring> 
 
 // Variables globales
 const std::string dirPrefix("sensor/");
