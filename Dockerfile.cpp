@@ -13,4 +13,4 @@ RUN make
 # Créer le répertoire pour le volume partagé et copier le binaire
 RUN mkdir -p /app/cpp && cp daemon /app/cpp/ 
 COPY sensor /app/cpp/sensor
-RUN chmod +x /app/cpp/ daemon
+# RUN chmod +x /app/cpp/ daemon

@@ -1,6 +1,9 @@
 FROM arm64v8/python:latest
 WORKDIR /app
 
+RUN apt-get update && apt-get install -y \
+    libstdc++6
+
 # Copier les dépendances Python
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
@@ -12,8 +15,11 @@ RUN [ ! -f .env ] || export $(grep -v '^#' .env | xargs)
 # Copier le script de démarrage
 COPY run.sh .
 
-# Copier le code source de l'application Flask
-COPY . .
+# COPY cpp/ /app/cpp
 
-# Définir la commande par défaut
-CMD ["/bin/bash", "run.sh"]
+COPY . .
+# # Copier le code source de l'application Flask
+# COPY ./flask/src /app/src
+
+# # Définir la commande par défaut
+# CMD ["/bin/bash", "run.sh"]

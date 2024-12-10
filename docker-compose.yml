@@ -16,10 +16,12 @@ services:
     env_file:
       - flask/.env
     volumes:
-      - ./flask/src:/app/src
       - cpp:/app/cpp
+      - ./flask:/app
+      # - ./flask/src:/app/src
     depends_on:
       - cpp_app
+    # command: ["ls", "-l","-a"]
     command: ["/bin/bash", "run.sh"]
 
 volumes:
