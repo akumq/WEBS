@@ -1,0 +1,14 @@
+services:
+  flask-app:
+    build: 
+      context: .
+      dockerfile: DockerFile
+    ports:
+      - "8050:8050"
+    volumes:
+      - ./src:/app/src
+      - ./cpp:/app/cpp
+      - ./sensor:/app/sensor
+    env_file:
+      - .env
+    command: ["/bin/bash", "/app/run.sh"]

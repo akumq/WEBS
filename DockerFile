@@ -1,0 +1,30 @@
+FROM arm64v8/python:latest
+
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    cmake \
+    g++ \
+    make \
+    tree
+
+# Installation des librairies python
+COPY requirements.txt requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
+
+
+
+# Mise en place des variable d'environnement
+RUN [ ! -f .env ] || export $(grep -v '^#' .env | xargs)
+
+# Compilation du cpp
+COPY cpp/ cpp/
+RUN cd cpp && make && mv daemon ../daemon && cd
+
+COPY run.sh run.sh
+COPY app.py app.py
+# RUN ls flask -l > test.txt
+
+# RUN chmod +x run.sh
+# CMD ["./run.sh"]
