@@ -34,7 +34,7 @@ void setIterationIndex(std::string fname){
 // Lecture de l'index et activité
 void getIterationIndex(std::string fname){
 
-    my_activity = 0;
+    my_activity = 1;
     my_index = 1;
     std::stringstream ss;
     ss << dirPrefix << "/index/" << fname << "_activity"<< my_activity << ".idx";
@@ -71,7 +71,7 @@ int main(int argc, char *argv[]){
     // Install a signal handler
     std::signal(SIGINT, signal_handler);
 
-    if (argc > 2 && strlen(argv[0]) > 0){  // Utilisez strlen sans std::
+    if (argc > 2 && strlen(argv[0]) > 0){  
         my_sId = atoi(argv[1]);
         my_activity = atoi(argv[2]);
     }

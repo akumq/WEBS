@@ -22,4 +22,4 @@ DEBUG = os.getenv('DEBUG', 'TRUE').upper() == 'TRUE'
 # Démarrer l'application
 if __name__ == '__main__':
     app = create_app()
-    app.run(host=HOST, port=PORT, debug=DEBUG)
+    app.run(host=HOST, port=PORT, debug=True)
