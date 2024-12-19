@@ -3,97 +3,119 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Sensor Data Visualization</title>
-    <link rel="stylesheet" href="http://localhost:8050/static/css/style.css">
+    <title>Gestionnaire de Capteurs</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
   </head>
 
   <body>
-    <!-- Template pour la vue du graphique -->
-    <template id="graph-view-template">
-        <div class="sensor-view graph-view">
-            <canvas class="sensor-graph"></canvas>
-        </div>
-    </template>
-
-    <!-- Template pour la vue des données brutes -->
-    <template id="raw-view-template">
-        <div class="sensor-view raw-view">
-            <div class="view-header">
-                <h4>Données Brutes</h4>
-                <div class="view-controls">
-                    <button class="export-csv">Exporter CSV</button>
-                    <button class="clear-data">Effacer</button>
-                </div>
-            </div>
-            <div class="data-container">
-                <table class="data-table">
-                    <thead>
-                        <tr>
-                            <th>Timestamp</th>
-                            <th>Acc X</th>
-                            <th>Acc Y</th>
-                            <th>Acc Z</th>
-                            <th>Gyr X</th>
-                            <th>Gyr Y</th>
-                            <th>Gyr Z</th>
-                        </tr>
-                    </thead>
-                    <tbody class="sensor-data">
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </template>
-
-    <!-- Template pour le conteneur du capteur -->
-    <template id="sensor-container-template">
-        <div class="sensor-container">
-            <div class="sensor-header">
-                <h3 class="sensor-title"></h3>
-                <div class="sensor-info">
-                    <span class="patient-id"></span>
-                    <span class="activity-type"></span>
-                    <span class="update-rate"></span>
-                </div>
-            </div>
-            <div class="views-container">
-                <!-- Les vues seront insérées ici dynamiquement -->
-            </div>
-            <div class="sensor-status">
-                <span class="status-indicator"></span>
-                <span class="status-message"></span>
-            </div>
-        </div>
-    </template>
-
-    <!-- Contenu principal -->
-    <div class="content">
-        <div class="controls">
-            <form id="sensorForm">
-                <div class="form-group">
-                    <label for="patientId">ID Patient:</label>
-                    <select id="patientId" required>
-                        <!-- Options seront générées en JS -->
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="activity">Activité:</label>
-                    <select id="activity" required>
-                        <!-- Options seront générées en JS -->
-                    </select>
-                </div>
-                <button type="submit" id="startButton">Démarrer</button>
-                <button type="button" id="stopButton" disabled>Arrêter</button>
-            </form>
-        </div>
+    <div class="container mt-4">
+        <h1 class="mb-4">Gestionnaire de Capteurs</h1>
         
-        <div id="graphContainer">
-            <canvas id="sensorGraph"></canvas>
+        <form id="sensorForm" class="mb-4">
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label for="patientId" class="form-label">ID Patient</label>
+                    <select id="patientId" class="form-select" required></select>
+                </div>
+                <div class="col-md-6">
+                    <label for="activity" class="form-label">Activité</label>
+                    <select id="activity" class="form-select" required></select>
+                </div>
+                <div class="col-md-6">
+                    <label for="refreshRate" class="form-label">Fréquence de rafraîchissement (ms)</label>
+                    <input type="number" 
+                           class="form-select" 
+                           id="refreshRate" 
+                           value="100" 
+                           min="50" 
+                           max="1000" 
+                           step="50" 
+                           required>
+                </div>
+            </div>
+
+            <div class="row mt-4">
+                <div class="col-12">
+                    <h3>Paramètres d'affichage</h3>
+                </div>
+                <div class="col-md-4">
+                    <h4>Cheville Gauche</h4>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" value="alx" id="alx">
+                        <label class="form-check-label" for="alx">Accélération X</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" value="aly" id="aly">
+                        <label class="form-check-label" for="aly">Accélération Y</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" value="alz" id="alz">
+                        <label class="form-check-label" for="alz">Accélération Z</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" value="glx" id="glx">
+                        <label class="form-check-label" for="glx">Position angulaire X</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" value="gly" id="gly">
+                        <label class="form-check-label" for="gly">Position angulaire Y</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" value="glz" id="glz">
+                        <label class="form-check-label" for="glz">Position angulaire Z</label>
+                    </div>
+                </div>
+                
+                <div class="col-md-4">
+                    <h4>Avant-bras Droit</h4>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" value="arx" id="arx">
+                        <label class="form-check-label" for="arx">Accélération X</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" value="ary" id="ary">
+                        <label class="form-check-label" for="ary">Accélération Y</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" value="arz" id="arz">
+                        <label class="form-check-label" for="arz">Accélération Z</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" value="grx" id="grx">
+                        <label class="form-check-label" for="grx">Position angulaire X</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" value="gry" id="gry">
+                        <label class="form-check-label" for="gry">Position angulaire Y</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" value="grz" id="grz">
+                        <label class="form-check-label" for="grz">Position angulaire Z</label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-4">
+                <button type="submit" id="startButton" class="btn btn-primary">Démarrer</button>
+                <button type="button" id="stopButton" class="btn btn-danger" disabled>Arrêter</button>
+            </div>
+        </form>
+
+        <div class="row mt-4">
+            <div class="col-12">
+                <h3>Graphiques</h3>
+                <div id="graphsContainer" class="row">
+                    <!-- Les graphiques seront ajoutés ici dynamiquement -->
+                </div>
+            </div>
         </div>
     </div>
 
-    <script src="http://localhost:8050/static/js/Sensor.js"></script>
-    <script src="http://localhost:8050/static/js/SensorManager.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="{{ url_for('static', filename='js/Sensor.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/SensorManager.js') }}"></script>
   </body>
 </html>

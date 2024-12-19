@@ -1,4 +1,3 @@
-
 .sensor-view {
     background: white;
     border-radius: 8px;
@@ -99,4 +98,23 @@
     justify-content: center;
     gap: 20px;
     margin-top: 10px;
+}
+
+#graphsContainer canvas {
+    min-height: 300px;
+    width: 100%;
+}
+
+.graph-container {
+    margin-bottom: 20px;
+}
+
+.col-md-6.mb-4 {
+    height: 400px;
+    margin-bottom: 20px;
+}
+
+#graphsContainer canvas {
+    height: 300px !important;
+    width: 100% !important;
 }
