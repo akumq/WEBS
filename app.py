@@ -6,10 +6,14 @@ load_dotenv()
 
 def create_app():
     # Créer l'instance Flask
-    app = Flask(__name__, template_folder='src/templates')
+    app = Flask(__name__)
+    
+    # Configuration explicite des dossiers statiques
+    app.static_folder = 'src/static'
+    app.static_url_path = '/static'
+    app.template_folder = 'src/templates'
 
     # Initialiser les routes
-    # init_routes(app)
     app.register_blueprint(routes)
 
     return app

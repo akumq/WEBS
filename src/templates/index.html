@@ -1,320 +1,99 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="fr">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Sensor Data Visualization</title>
-    <style>
-      html,
-      body {
-        height: 100%;
-        margin: 0;
-        font-family: Arial, sans-serif;
-      }
-      body {
-        display: flex;
-        flex-direction: column;
-      }
-      .slider-container {
-        padding: 10px;
-        background-color: #f4f4f4;
-        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-        display: flex;
-        justify-content: center;
-        align-items: center;
-      }
-      .slider-container label {
-        margin-right: 10px;
-      }
-      .content {
-        display: grid;
-        grid-template-columns: 250px 1fr;
-        flex-grow: 1;
-        gap: 20px;
-        padding: 20px;
-        box-sizing: border-box;
-      }
-      .sidebar {
-        background-color: #f4f4f4;
-        padding: 20px;
-        box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
-        display: grid;
-        grid-template-rows: repeat(3, 1fr);
-        gap: 20px;
-      }
-      .selection {
-        background-color: #e0d7ff;
-        padding: 10px;
-        border-radius: 5px;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-      }
-      .selection.blue {
-        background-color: #add8e6; /* Light blue */
-      }
-      .selection.green {
-        background-color: #90ee90; /* Light green */
-      }
-      .selection.red {
-        background-color: #ffb6c1; /* Light red */
-      }
-      .selection select {
-        margin-right: 10px;
-      }
-      .main-content {
-        display: grid;
-        grid-template-rows: repeat(3, 1fr);
-        gap: 20px;
-      }
-      .graph-row {
-        display: grid;
-        grid-template-columns: repeat(4, 1fr);
-        gap: 20px;
-      }
-      .graph {
-        border: 1px solid #ccc;
-        padding: 10px;
-        border-radius: 5px;
-        background-color: white;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-      }
-      .graph img {
-        max-width: 100%;
-        max-height: 100%;
-      }
-    </style>
+    <link rel="stylesheet" href="http://localhost:8050/static/css/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   </head>
 
   <body>
+    <!-- Template pour la vue du graphique -->
+    <template id="graph-view-template">
+        <div class="sensor-view graph-view">
+            <canvas class="sensor-graph"></canvas>
+        </div>
+    </template>
+
+    <!-- Template pour la vue des données brutes -->
+    <template id="raw-view-template">
+        <div class="sensor-view raw-view">
+            <div class="view-header">
+                <h4>Données Brutes</h4>
+                <div class="view-controls">
+                    <button class="export-csv">Exporter CSV</button>
+                    <button class="clear-data">Effacer</button>
+                </div>
+            </div>
+            <div class="data-container">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Timestamp</th>
+                            <th>Acc X</th>
+                            <th>Acc Y</th>
+                            <th>Acc Z</th>
+                            <th>Gyr X</th>
+                            <th>Gyr Y</th>
+                            <th>Gyr Z</th>
+                        </tr>
+                    </thead>
+                    <tbody class="sensor-data">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </template>
+
+    <!-- Template pour le conteneur du capteur -->
+    <template id="sensor-container-template">
+        <div class="sensor-container">
+            <div class="sensor-header">
+                <h3 class="sensor-title"></h3>
+                <div class="sensor-info">
+                    <span class="patient-id"></span>
+                    <span class="activity-type"></span>
+                    <span class="update-rate"></span>
+                </div>
+            </div>
+            <div class="views-container">
+                <!-- Les vues seront insérées ici dynamiquement -->
+            </div>
+            <div class="sensor-status">
+                <span class="status-indicator"></span>
+                <span class="status-message"></span>
+            </div>
+        </div>
+    </template>
+
+    <!-- Contenu principal -->
     <div class="content">
-      <div class="sidebar" id="sidebar"></div>
-      <div class="main-content" id="main-content"></div>
+        <div class="controls">
+            <form id="sensorForm">
+                <div class="form-group">
+                    <label for="patientId">ID Patient:</label>
+                    <select id="patientId" required>
+                        <!-- Options seront générées en JS -->
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="activity">Activité:</label>
+                    <select id="activity" required>
+                        <!-- Options seront générées en JS -->
+                    </select>
+                </div>
+                <button type="submit" id="startButton">Démarrer</button>
+                <button type="button" id="stopButton" disabled>Arrêter</button>
+            </form>
+        </div>
+        
+        <div id="graphContainer">
+            <canvas id="sensorGraph"></canvas>
+        </div>
     </div>
 
-    <div class="slider-container">
-      <label for="rangeSlider">Vitesse:</label>
-      <input
-        type="range"
-        id="rangeSlider"
-        name="rangeSlider"
-        min="100"
-        max="2000"
-        value="100"
-      />
-      <span id="rangeValue">100</span>
-      <span>&nbsp;ms</span>
-    </div>
-  <script>
-    const rangeSlider = document.getElementById("rangeSlider");
-    const rangeValue = document.getElementById("rangeValue");
-
-    rangeSlider.addEventListener("input", function () {
-      rangeValue.textContent = rangeSlider.value;
-    });
-
-    // Function to create selection divs dynamically
-    function createSelectionDivs() {
-      const sidebar = document.getElementById("sidebar");
-      const numberOfSelections = 3; // Number of selection divs you want to create
-      const colors = ["blue", "green", "red"]; // Array of color classes
-
-      for (let i = 0; i < numberOfSelections; i++) {
-        const selectionDiv = document.createElement("div");
-        selectionDiv.className = `selection ${colors[i]}`;
-        selectionDiv.dataset.index = i; // Add a data attribute for index
-
-        const subjectSelect = document.createElement("select");
-        for (let j = 1; j <= 10; j++) {
-          const option = document.createElement("option");
-          option.textContent = `Subject ${j}`;
-          subjectSelect.appendChild(option);
-        }
-
-        const activitySelect = document.createElement("select");
-        for (let j = 0; j <= 11; j++) {
-          const option = document.createElement("option");
-          option.textContent = `Activity ${j}`;
-          activitySelect.appendChild(option);
-        }
-
-        // Add event listeners to the select elements
-        subjectSelect.addEventListener("change", function () {
-          updateGraphRow(selectionDiv.dataset.index);
-        });
-        activitySelect.addEventListener("change", function () {
-          updateGraphRow(selectionDiv.dataset.index);
-        });
-
-        selectionDiv.appendChild(subjectSelect);
-        selectionDiv.appendChild(activitySelect);
-        sidebar.appendChild(selectionDiv);
-      }
-    }
-
-    const startedSensors = new Set();
-
-    function updateDynamicGraphs() {
-      const selections = document.querySelectorAll(".selection");
-      selections.forEach((selection, index) => {
-        const patientId =
-          selection.querySelector("select:first-child").selectedIndex + 1;
-        const activity =
-          selection.querySelector("select:last-child").selectedIndex;
-
-        // Clé unique pour identifier un capteur
-        const sensorKey = `${patientId}_${activity}`;
-
-        // Démarrer le capteur uniquement s'il n'a pas déjà été démarré
-        if (!startedSensors.has(sensorKey)) {
-          startSensor(patientId, activity)
-            .then(() => {
-              // Ajouter à l'ensemble des capteurs démarrés une fois le démarrage réussi
-              startedSensors.add(sensorKey);
-            })
-            .catch((error) => {
-              console.error(
-                `Erreur au démarrage du capteur ${sensorKey}:`,
-                error
-              );
-            });
-        }
-
-        // Récupérer et mettre à jour les données à chaque fois
-        getLatestSensorData(patientId, activity).then((data) => {
-          if (data) {
-            updateGraphRow(index, data);
-          }
-        });
-      });
-    }
-
-    const graphTitles = [
-      "Acceleration left ankle",
-      "Gyro left ankle",
-      "Acceleration lower right arm",
-      "Gyro lower right arm",
-    ];
-    // Function to update a specific graph row
-    function updateGraphRow(index, data) {
-      const graphRow = document.getElementById(`graph-row-${index}`);
-      if (graphRow) {
-        graphRow.innerHTML = ""; // Effacer les graphiques existants
-
-        graphTitles.forEach((title, graphIndex) => {
-          const graph = document.createElement("div");
-          graph.className = "graph";
-
-          // Exemple de mise à jour avec des données
-          if (data) {
-            const graphData = [
-              data.accelerometer_left_ankle,
-              data.gyroscope_left_ankle,
-              data.accelerometer_right_arm,
-              data.gyroscope_right_arm,
-            ];
-
-            graph.innerHTML = `
-                        <h3>${title}</h3>
-                        <p>Valeur: ${graphData[graphIndex] || "N/A"}</p>
-                    `;
-          } else {
-            graph.innerHTML = `<h3>${title}</h3>`;
-          }
-
-          graphRow.appendChild(graph);
-        });
-      }
-    }
-
-    // Function to create graph rows dynamically
-    function createGraphRows() {
-      const mainContent = document.getElementById("main-content");
-      mainContent.innerHTML = ""; // Clear existing graph rows
-
-      const numberOfRows = 3; // Number of graph rows you want to create
-
-      for (let i = 0; i < numberOfRows; i++) {
-        const graphRow = document.createElement("div");
-        graphRow.className = "graph-row";
-        graphRow.id = `graph-row-${i}`; // Add an ID for each graph row
-
-        graphTitles.forEach((title) => {
-          const graph = document.createElement("div");
-          graph.className = "graph";
-          graph.innerHTML = `<h3>${title}</h3>`;
-          graphRow.appendChild(graph);
-        });
-
-        mainContent.appendChild(graphRow);
-      }
-    }
-
-    async function startSensor(patientId, activity) {
-      try {
-        const response = await fetch("/start_sensor", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ patient_id: patientId, activity: activity }),
-        });
-
-        if (!response.ok) {
-          throw new Error("Échec du démarrage du capteur");
-        }
-
-        const result = await response.json();
-        console.log(result);
-        return result;
-      } catch (error) {
-        console.error("Erreur lors du démarrage du capteur:", error);
-        throw error;
-      }
-    }
-
-    async function getLatestSensorData(patientId, activity) {
-      try {
-        const response = await fetch(
-          `/get_latest_data?patient_id=${patientId}&activity=${activity}`
-        );
-        const result = await response.json();
-        return result.data;
-      } catch (error) {
-        console.error("Erreur lors de la récupération des données:", error);
-        return null;
-      }
-    }
-
-    function initializeSensorVisualization() {
-      createSelectionDivs();
-      createGraphRows();
-
-      // Mettre à jour périodiquement
-      const rangeSlider = document.getElementById("rangeSlider");
-
-      // Stocker l'intervalle dans une variable globale pour pouvoir le réinitialiser
-      window.sensorUpdateInterval = setInterval(
-        updateDynamicGraphs,
-        rangeSlider.value
-      );
-
-      // Mise à jour de la vitesse
-      rangeSlider.addEventListener("input", function () {
-        // Réinitialiser l'intervalle avec la nouvelle vitesse
-        clearInterval(window.sensorUpdateInterval);
-        window.sensorUpdateInterval = setInterval(
-          updateDynamicGraphs,
-          this.value
-        );
-      });
-    }
-
-    // Lancer l'initialisation
-    initializeSensorVisualization();
-  </script>
-</body>
+    <script src="http://localhost:8050/static/js/Sensor.js"></script>
+    <script src="http://localhost:8050/static/js/SensorManager.js"></script>
+  </body>
 </html>

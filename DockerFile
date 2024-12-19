@@ -1,4 +1,4 @@
-FROM arm64v8/python:latest
+FROM python:latest
 
 WORKDIR /app
 
@@ -13,8 +13,6 @@ RUN apt-get update && apt-get install -y \
 COPY requirements.txt requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
 
-
-
 # Mise en place des variable d'environnement
 RUN [ ! -f .env ] || export $(grep -v '^#' .env | xargs)
 
@@ -28,3 +26,4 @@ COPY app.py app.py
 
 # RUN chmod +x run.sh
 # CMD ["./run.sh"]
+COPY src/ /app/src/
