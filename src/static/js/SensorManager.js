@@ -104,6 +104,11 @@ class SensorManager {
         // Vérifier si un sensor existe déjà pour cette combinaison patient/activité
         const existingSensor = this.sensors.get(sensorKey);
         if (existingSensor) {
+            // Mettre à jour le taux de rafraîchissement si nécessaire
+            if (existingSensor.refreshRate !== refreshRate) {
+                existingSensor.updateRefreshRate(refreshRate);
+            }
+
             // Convertir les Sets en Arrays pour faciliter la comparaison
             const currentParams = Array.from(existingSensor.selectedParams);
             const newParams = Array.from(this.selectedParams);

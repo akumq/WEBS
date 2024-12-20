@@ -150,8 +150,6 @@ class Sensor {
             try {
                 const data = await this.getLatestData();
                 if (data === null) {
-                    // Si getLatestData retourne null, c'est qu'il y a eu une erreur 400
-                    // et le sensor a déjà été arrêté
                     clearInterval(this.updateInterval);
                     this.updateInterval = null;
                     return;
@@ -473,5 +471,18 @@ class Sensor {
             delete this.data.values[param];
             this.updateGraphDatasets();
         }
+    }
+
+    updateRefreshRate(newRefreshRate) {
+        this.refreshRate = newRefreshRate;
+        
+        // Arrêter l'intervalle actuel
+        if (this.updateInterval) {
+            clearInterval(this.updateInterval);
+            this.updateInterval = null;
+        }
+        
+        // Redémarrer avec le nouveau taux de rafraîchissement
+        this.startDataPolling();
     }
 }
