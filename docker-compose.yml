@@ -9,6 +9,8 @@ services:
       - ./src:/app/src
       - ./cpp:/app/cpp
       - ./sensor:/app/sensor
+    environment:
+      - FLASK_DEBUG=1
     env_file:
       - .env
     command: ["/bin/bash", "/app/run.sh"]

@@ -3,6 +3,27 @@ class SensorManager {
         this.sensors = new Map();
         this.initializeUI();
         this.selectedParams = new Set();
+        
+        window.addEventListener('beforeunload', async (e) => {
+            e.preventDefault();
+            await this.stopAllSensors();
+            console.log('Tous les capteurs ont été arrêtés');
+        });
+    }
+
+    async stopAllSensors() {
+        const stopPromises = Array.from(this.sensors.values()).map(sensor => {
+            return sensor.stopSensor().catch(error => {
+                console.error('Erreur lors de l\'arrêt d\'un capteur:', error);
+            });
+        });
+
+        try {
+            await Promise.all(stopPromises);
+            this.sensors.clear();
+        } catch (error) {
+            console.error('Erreur lors de l\'arrêt des capteurs:', error);
+        }
     }
 
     initializeUI() {
@@ -40,8 +61,15 @@ class SensorManager {
             this.handleStart();
         });
 
-        document.getElementById('stopButton').addEventListener('click', () => {
-            this.handleStop();
+        // Gestion du panneau latéral
+        const toggleButton = document.getElementById('toggleForm');
+        const sidePanel = document.getElementById('sidePanel');
+        const contentArea = document.querySelector('.content-area');
+        
+        toggleButton.addEventListener('click', () => {
+            sidePanel.classList.toggle('collapsed');
+            toggleButton.classList.toggle('collapsed');
+            contentArea.classList.toggle('expanded');
         });
     }
 
@@ -73,58 +101,113 @@ class SensorManager {
 
         const sensorKey = `${patientId}_${activity}`;
 
-        try {
-            // Créer un nouveau capteur
-            const sensor = new Sensor(patientId, activity, Array.from(this.selectedParams), refreshRate);
-            
-            // Démarrer le capteur et attendre la confirmation
-            const response = await sensor.startSensor();
-            console.log('Réponse du serveur:', response);
+        // Vérifier si un sensor existe déjà pour cette combinaison patient/activité
+        const existingSensor = this.sensors.get(sensorKey);
+        if (existingSensor) {
+            // Convertir les Sets en Arrays pour faciliter la comparaison
+            const currentParams = Array.from(existingSensor.selectedParams);
+            const newParams = Array.from(this.selectedParams);
 
+            // Trouver les paramètres à ajouter et à supprimer
+            const paramsToAdd = newParams.filter(param => !currentParams.includes(param));
+            const paramsToRemove = currentParams.filter(param => !newParams.includes(param));
+
+            // Mettre à jour les paramètres du sensor existant
+            if (paramsToAdd.length > 0) {
+                existingSensor.addParameters(paramsToAdd);
+            }
+            if (paramsToRemove.length > 0) {
+                paramsToRemove.forEach(param => existingSensor.removeParameter(param));
+            }
+
+            return;
+        }
+
+        // Si aucun sensor n'existe, créer un nouveau
+        try {
+            const sensor = new Sensor(
+                patientId, 
+                activity, 
+                Array.from(this.selectedParams), 
+                refreshRate,
+                this
+            );
+            
+            const response = await sensor.startSensor();
             if (response.status === 'success') {
-                // Ajouter le capteur à la map
                 this.sensors.set(sensorKey, sensor);
-                
-                // Démarrer le polling et le graphique
                 sensor.startDataPolling();
                 await sensor.renderGraph();
-
-                // Mettre à jour l'interface
-                document.getElementById('startButton').disabled = false;
-                document.getElementById('stopButton').disabled = false;
-                document.getElementById('refreshRate').disabled = false;
             } else {
                 throw new Error(response.error || 'Erreur inconnue lors du démarrage');
             }
         } catch (error) {
             console.error('Erreur lors du démarrage:', error);
             alert('Erreur lors du démarrage du capteur: ' + error.message);
-            
-            // Nettoyer en cas d'erreur
             this.sensors.delete(sensorKey);
         }
     }
 
-    async handleStop() {
-        const patientId = parseInt(document.getElementById('patientId').value);
-        const activity = parseInt(document.getElementById('activity').value);
+    async stopSensor(patientId, activity) {
         const sensorKey = `${patientId}_${activity}`;
-
         const sensor = this.sensors.get(sensorKey);
         if (!sensor) return;
 
         try {
-            await sensor.stopSensor();
-            this.sensors.delete(sensorKey);
+            // Vérifier si c'est la dernière vue
+            const shouldStop = this.removeView(patientId, activity, sensor);
 
-            // Ne désactiver le bouton Stop que si c'est le dernier capteur
-            if (this.sensors.size === 0) {
-                document.getElementById('stopButton').disabled = true;
+            if (shouldStop) {
+                // Arrêter le sensor côté serveur
+                const response = await fetch('/stop_reader', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        patient_id: patientId,
+                        activity: activity
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error('Erreur lors de l\'arrêt du capteur');
+                }
+
+                // Marquer comme arrêté et supprimer de la map
+                sensor.isRunning = false;
+                this.sensors.delete(sensorKey);
             }
+
+            // Nettoyer la vue
+            sensor.cleanup();
+
         } catch (error) {
             console.error('Erreur lors de l\'arrêt:', error);
             alert('Erreur lors de l\'arrêt du capteur');
         }
+    }
+
+    addView(patientId, activity, view) {
+        const sensorKey = `${patientId}_${activity}`;
+        if (!this.views.has(sensorKey)) {
+            this.views.set(sensorKey, new Set());
+        }
+        this.views.get(sensorKey).add(view);
+    }
+
+    removeView(patientId, activity, view) {
+        const sensorKey = `${patientId}_${activity}`;
+        const views = this.views.get(sensorKey);
+        if (views) {
+            views.delete(view);
+            // Si c'était la dernière vue, supprimer le sensor
+            if (views.size === 0) {
+                this.views.delete(sensorKey);
+                return true; // Indiquer qu'il faut arrêter le sensor
+            }
+        }
+        return false; // Indiquer qu'il ne faut pas arrêter le sensor
     }
 }
 

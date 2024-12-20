@@ -1,9 +1,10 @@
 class Sensor {
-    constructor(patientId, activity, selectedParams, refreshRate) {
+    constructor(patientId, activity, selectedParams, refreshRate, manager) {
         this.patientId = patientId;
         this.activity = activity;
         this.selectedParams = selectedParams;
         this.refreshRate = refreshRate;
+        this.manager = manager;
         this.isRunning = false;
         this.updateInterval = null;
         this.data = {
@@ -39,25 +40,66 @@ class Sensor {
     }
 
     createGraph() {
-        const graphsContainer = document.getElementById('graphsContainer');
-        
-        // Créer un conteneur pour ce graphique
-        const graphDiv = document.createElement('div');
-        graphDiv.className = 'col-md-6 mb-4';
-        graphDiv.id = `graph_${this.patientId}_${this.activity}`;
-        
-        // Ajouter un titre
-        const title = document.createElement('h4');
-        title.textContent = `Patient ${this.patientId} - ${this.getActivityName(this.activity)}`;
-        graphDiv.appendChild(title);
+        // Trouver ou créer la ligne pour ce patient
+        let patientRow = document.getElementById(`patient_${this.patientId}`);
+        if (!patientRow) {
+            patientRow = document.createElement('div');
+            patientRow.id = `patient_${this.patientId}`;
+            patientRow.className = 'patient-row';
+            
+            const title = document.createElement('h3');
+            title.textContent = `Patient ${this.patientId}`;
+            patientRow.appendChild(title);
 
-        // Créer le canvas
+            const scrollContainer = document.createElement('div');
+            scrollContainer.className = 'graphs-scroll';
+            patientRow.appendChild(scrollContainer);
+
+            // Insérer dans l'ordre des IDs de patient
+            const container = document.getElementById('graphsContainer');
+            const rows = container.getElementsByClassName('patient-row');
+            let inserted = false;
+            
+            for (let row of rows) {
+                const rowId = parseInt(row.id.split('_')[1]);
+                if (rowId > this.patientId) {
+                    container.insertBefore(patientRow, row);
+                    inserted = true;
+                    break;
+                }
+            }
+            
+            if (!inserted) {
+                container.appendChild(patientRow);
+            }
+        }
+
+        // Créer la carte pour ce graphique
+        const graphCard = document.createElement('div');
+        graphCard.className = 'graph-card';
+        graphCard.id = `graph_${this.patientId}_${this.activity}`;
+
+        // Créer l'en-tête du graphique avec titre et bouton de suppression
+        const header = document.createElement('div');
+        header.className = 'graph-header';
+
+        const title = document.createElement('h4');
+        title.textContent = this.getActivityName(this.activity);
+
+        // Créer le bouton de suppression
+        const deleteButton = document.createElement('button');
+        deleteButton.className = 'delete-graph-btn';
+        deleteButton.innerHTML = '<i class="fas fa-trash-alt"></i>';
+        deleteButton.onclick = () => this.stopSensor();
+
+        header.appendChild(title);
+        header.appendChild(deleteButton);
+        graphCard.appendChild(header);
+
         const canvas = document.createElement('canvas');
-        graphDiv.appendChild(canvas);
-        
-        // Ajouter au conteneur principal
-        graphsContainer.appendChild(graphDiv);
-        
+        graphCard.appendChild(canvas);
+
+        patientRow.querySelector('.graphs-scroll').appendChild(graphCard);
         this.canvas = canvas;
     }
 
@@ -98,8 +140,22 @@ class Sensor {
 
     startDataPolling() {
         this.updateInterval = setInterval(async () => {
+            // Vérifier si le capteur est toujours en cours d'exécution
+            if (!this.isRunning) {
+                clearInterval(this.updateInterval);
+                this.updateInterval = null;
+                return;
+            }
+
             try {
                 const data = await this.getLatestData();
+                if (data === null) {
+                    // Si getLatestData retourne null, c'est qu'il y a eu une erreur 400
+                    // et le sensor a déjà été arrêté
+                    clearInterval(this.updateInterval);
+                    this.updateInterval = null;
+                    return;
+                }
                 this.updateData(data);
             } catch (error) {
                 console.error('Erreur lors de la récupération des données:', error);
@@ -108,22 +164,44 @@ class Sensor {
     }
 
     async getLatestData() {
+        // Vérifier si le capteur est toujours en cours d'exécution
+        if (!this.isRunning) {
+            throw new Error('Le capteur n\'est plus actif');
+        }
+
         const params = new URLSearchParams({
             patient_id: this.patientId,
             activity: this.activity
         });
 
-        const response = await fetch(`/get_latest_data?${params.toString()}`);
-        if (!response.ok) {
-            throw new Error('Erreur lors de la récupération des données');
+        try {
+            const response = await fetch(`/get_latest_data?${params.toString()}`);
+            
+            if (response.status === 400) {
+                // Si on reçoit une erreur 400, on arrête le sensor
+                console.warn('Erreur 400 reçue, arrêt du sensor');
+                await this.stopSensor();
+                throw new Error('Le sensor a été arrêté suite à une erreur 400');
+            }
+            
+            if (!response.ok) {
+                throw new Error('Erreur lors de la récupération des données');
+            }
+            
+            const data = await response.json();
+            return data;
+        } catch (error) {
+            console.error('Erreur dans getLatestData:', error);
+            if (error.message.includes('400')) {
+                // Si l'erreur est liée au 400, on ne la propage pas plus loin
+                // car le sensor a déjà été arrêté
+                return null;
+            }
+            throw error;
         }
-        const data = await response.json();
-        console.log('Données reçues:', data);  // Debug
-        return data;
     }
 
     updateData(sensorData) {
-        // Vérifier que sensorData.data existe
         if (!sensorData || !sensorData.data) {
             console.error('Données invalides:', sensorData);
             return;
@@ -132,7 +210,6 @@ class Sensor {
         const timestamp = new Date().toISOString();
         this.data.timestamps.push(timestamp);
 
-        // Mettre à jour uniquement les paramètres sélectionnés
         const dataArray = sensorData.data;
         const paramMapping = {
             alx: 0, aly: 1, alz: 2,
@@ -141,10 +218,17 @@ class Sensor {
             grx: 9, gry: 10, grz: 11
         };
 
+        // Mettre à jour les données pour chaque paramètre
         this.selectedParams.forEach(param => {
             const index = paramMapping[param];
-            if (index !== undefined && dataArray[index] !== undefined) {
-                this.data.values[param].push(dataArray[index]);
+            if (index !== undefined) {
+                // Garder la dernière valeur si la nouvelle est undefined
+                const newValue = dataArray[index];
+                const lastValue = this.data.values[param].length > 0 ? 
+                    this.data.values[param][this.data.values[param].length - 1] : 
+                    null;
+                    
+                this.data.values[param].push(newValue !== undefined ? newValue : lastValue);
             }
         });
 
@@ -156,14 +240,6 @@ class Sensor {
                 this.data.values[param] = this.data.values[param].slice(-maxDataPoints);
             });
         }
-
-        // Debug
-        console.log('Données mises à jour:', {
-            timestamps: this.data.timestamps.length,
-            values: Object.fromEntries(
-                Object.entries(this.data.values).map(([k, v]) => [k, v.length])
-            )
-        });
 
         this.updateGraph();
     }
@@ -184,7 +260,7 @@ class Sensor {
                     tension: 0.4,
                     borderWidth: 2,
                     pointRadius: 0,
-                    fill: false  // Empêcher le remplissage
+                    fill: false
                 }))
             },
             options: {
@@ -200,12 +276,18 @@ class Sensor {
                     x: {
                         type: 'time',
                         time: {
-                            unit: 'second'
+                            unit: 'second',
+                            displayFormats: {
+                                second: 'HH:mm:ss'
+                            }
                         },
                         display: true,
                         title: {
                             display: true,
                             text: 'Temps'
+                        },
+                        ticks: {
+                            maxRotation: 0
                         }
                     },
                     y: {
@@ -273,9 +355,18 @@ class Sensor {
     async stopSensor() {
         if (!this.isRunning) return;
 
+        this.isRunning = false;
+
         try {
             const response = await fetch('/stop_reader', {
-                method: 'POST'
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    patient_id: this.patientId,
+                    activity: this.activity
+                })
             });
 
             if (!response.ok) {
@@ -287,7 +378,6 @@ class Sensor {
                 this.updateInterval = null;
             }
 
-            this.isRunning = false;
             if (this.chart) {
                 this.chart.destroy();
                 this.chart = null;
@@ -298,9 +388,90 @@ class Sensor {
             if (graphDiv) {
                 graphDiv.remove();
             }
+
+            // Vérifier si la ligne du patient est vide et la supprimer si c'est le cas
+            const patientRow = document.getElementById(`patient_${this.patientId}`);
+            if (patientRow && !patientRow.querySelector('.graph-card')) {
+                patientRow.remove();
+            }
+
+            // Supprimer le sensor de la map du manager
+            this.manager.sensors.delete(`${this.patientId}_${this.activity}`);
+
         } catch (error) {
             console.error('Erreur:', error);
             throw error;
+        }
+    }
+
+    cleanup() {
+        // Méthode pour nettoyer les ressources sans arrêter le sensor
+        if (this.updateInterval) {
+            clearInterval(this.updateInterval);
+            this.updateInterval = null;
+        }
+
+        if (this.chart) {
+            this.chart.destroy();
+            this.chart = null;
+        }
+
+        // Supprimer le conteneur du graphique
+        const graphDiv = document.getElementById(`graph_${this.patientId}_${this.activity}`);
+        if (graphDiv) {
+            graphDiv.remove();
+        }
+
+        // Vérifier si la ligne du patient est vide
+        const patientRow = document.getElementById(`patient_${this.patientId}`);
+        if (patientRow && !patientRow.querySelector('.graph-card')) {
+            patientRow.remove();
+        }
+    }
+
+    addParameters(newParams) {
+        // Ajouter les nouveaux paramètres à la liste
+        newParams.forEach(param => {
+            if (!this.selectedParams.includes(param)) {
+                this.selectedParams.push(param);
+                this.data.values[param] = [];
+            }
+        });
+
+        // Remplir les données historiques pour les nouveaux paramètres
+        const dataLength = this.data.timestamps.length;
+        newParams.forEach(param => {
+            // Remplir avec des valeurs nulles pour aligner avec les données existantes
+            this.data.values[param] = new Array(dataLength).fill(null);
+        });
+
+        // Mettre à jour le graphique avec les nouveaux paramètres
+        this.updateGraphDatasets();
+    }
+
+    updateGraphDatasets() {
+        if (!this.chart) return;
+
+        // Mettre à jour les datasets du graphique
+        this.chart.data.datasets = this.selectedParams.map(param => ({
+            label: this.getParameterLabel(param),
+            data: this.data.values[param],
+            borderColor: this.colors[param],
+            tension: 0.4,
+            borderWidth: 2,
+            pointRadius: 0,
+            fill: false
+        }));
+
+        this.chart.update();
+    }
+
+    removeParameter(param) {
+        const index = this.selectedParams.indexOf(param);
+        if (index > -1) {
+            this.selectedParams.splice(index, 1);
+            delete this.data.values[param];
+            this.updateGraphDatasets();
         }
     }
 }

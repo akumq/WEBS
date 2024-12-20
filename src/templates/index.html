@@ -8,108 +8,110 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
   </head>
 
   <body>
-    <div class="container mt-4">
-        <h1 class="mb-4">Gestionnaire de Capteurs</h1>
-        
-        <form id="sensorForm" class="mb-4">
-            <div class="row g-3">
-                <div class="col-md-6">
+    <div class="main-container">
+        <!-- Bouton pour afficher/masquer le formulaire -->
+        <button id="toggleForm" class="toggle-button">
+            <span class="toggle-icon">≡</span>
+        </button>
+
+        <!-- Panneau latéral avec le formulaire -->
+        <div id="sidePanel" class="side-panel">
+            <h2 class="mb-4">Configuration</h2>
+            
+            <form id="sensorForm" class="mb-4">
+                <div class="mb-3">
                     <label for="patientId" class="form-label">ID Patient</label>
                     <select id="patientId" class="form-select" required></select>
                 </div>
-                <div class="col-md-6">
+                <div class="mb-3">
                     <label for="activity" class="form-label">Activité</label>
                     <select id="activity" class="form-select" required></select>
                 </div>
-                <div class="col-md-6">
-                    <label for="refreshRate" class="form-label">Fréquence de rafraîchissement (ms)</label>
+                <div class="mb-3">
+                    <label for="refreshRate" class="form-label">Rafraîchissement (ms)</label>
                     <input type="number" 
                            class="form-select" 
                            id="refreshRate" 
                            value="100" 
-                           min="50" 
-                           max="1000" 
-                           step="50" 
+                           min="100" 
+                           max="10000" 
+                           step="100" 
                            required>
                 </div>
-            </div>
 
-            <div class="row mt-4">
-                <div class="col-12">
-                    <h3>Paramètres d'affichage</h3>
+                <div class="sensor-params">
+                    <h4>Paramètres d'affichage</h4>
+                    <div class="param-group">
+                        <h5>Cheville Gauche</h5>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" value="alx" id="alx">
+                            <label class="form-check-label" for="alx">Accélération X</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" value="aly" id="aly">
+                            <label class="form-check-label" for="aly">Accélération Y</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" value="alz" id="alz">
+                            <label class="form-check-label" for="alz">Accélération Z</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" value="glx" id="glx">
+                            <label class="form-check-label" for="glx">Position angulaire X</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" value="gly" id="gly">
+                            <label class="form-check-label" for="gly">Position angulaire Y</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" value="glz" id="glz">
+                            <label class="form-check-label" for="glz">Position angulaire Z</label>
+                        </div>
+                    </div>
+                    
+                    <div class="param-group">
+                        <h5>Avant-bras Droit</h5>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" value="arx" id="arx">
+                            <label class="form-check-label" for="arx">Accélération X</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" value="ary" id="ary">
+                            <label class="form-check-label" for="ary">Accélération Y</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" value="arz" id="arz">
+                            <label class="form-check-label" for="arz">Accélération Z</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" value="grx" id="grx">
+                            <label class="form-check-label" for="grx">Position angulaire X</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" value="gry" id="gry">
+                            <label class="form-check-label" for="gry">Position angulaire Y</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" value="grz" id="grz">
+                            <label class="form-check-label" for="grz">Position angulaire Z</label>
+                        </div>
+                    </div>
                 </div>
-                <div class="col-md-4">
-                    <h4>Cheville Gauche</h4>
-                    <div class="form-check">
-                        <input class="form-check-input" type="checkbox" value="alx" id="alx">
-                        <label class="form-check-label" for="alx">Accélération X</label>
-                    </div>
-                    <div class="form-check">
-                        <input class="form-check-input" type="checkbox" value="aly" id="aly">
-                        <label class="form-check-label" for="aly">Accélération Y</label>
-                    </div>
-                    <div class="form-check">
-                        <input class="form-check-input" type="checkbox" value="alz" id="alz">
-                        <label class="form-check-label" for="alz">Accélération Z</label>
-                    </div>
-                    <div class="form-check">
-                        <input class="form-check-input" type="checkbox" value="glx" id="glx">
-                        <label class="form-check-label" for="glx">Position angulaire X</label>
-                    </div>
-                    <div class="form-check">
-                        <input class="form-check-input" type="checkbox" value="gly" id="gly">
-                        <label class="form-check-label" for="gly">Position angulaire Y</label>
-                    </div>
-                    <div class="form-check">
-                        <input class="form-check-input" type="checkbox" value="glz" id="glz">
-                        <label class="form-check-label" for="glz">Position angulaire Z</label>
-                    </div>
-                </div>
-                
-                <div class="col-md-4">
-                    <h4>Avant-bras Droit</h4>
-                    <div class="form-check">
-                        <input class="form-check-input" type="checkbox" value="arx" id="arx">
-                        <label class="form-check-label" for="arx">Accélération X</label>
-                    </div>
-                    <div class="form-check">
-                        <input class="form-check-input" type="checkbox" value="ary" id="ary">
-                        <label class="form-check-label" for="ary">Accélération Y</label>
-                    </div>
-                    <div class="form-check">
-                        <input class="form-check-input" type="checkbox" value="arz" id="arz">
-                        <label class="form-check-label" for="arz">Accélération Z</label>
-                    </div>
-                    <div class="form-check">
-                        <input class="form-check-input" type="checkbox" value="grx" id="grx">
-                        <label class="form-check-label" for="grx">Position angulaire X</label>
-                    </div>
-                    <div class="form-check">
-                        <input class="form-check-input" type="checkbox" value="gry" id="gry">
-                        <label class="form-check-label" for="gry">Position angulaire Y</label>
-                    </div>
-                    <div class="form-check">
-                        <input class="form-check-input" type="checkbox" value="grz" id="grz">
-                        <label class="form-check-label" for="grz">Position angulaire Z</label>
-                    </div>
-                </div>
-            </div>
 
-            <div class="mt-4">
-                <button type="submit" id="startButton" class="btn btn-primary">Démarrer</button>
-                <button type="button" id="stopButton" class="btn btn-danger" disabled>Arrêter</button>
-            </div>
-        </form>
-
-        <div class="row mt-4">
-            <div class="col-12">
-                <h3>Graphiques</h3>
-                <div id="graphsContainer" class="row">
-                    <!-- Les graphiques seront ajoutés ici dynamiquement -->
+                <div class="form-buttons">
+                    <button type="submit" id="startButton" class="btn btn-primary">Démarrer</button>
                 </div>
+            </form>
+        </div>
+
+        <!-- Conteneur principal pour les graphiques -->
+        <div class="content-area">
+            <div id="graphsContainer">
+                <!-- Les graphiques seront organisés ici par patient -->
             </div>
         </div>
     </div>
