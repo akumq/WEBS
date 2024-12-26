@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sensor Data</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <h1>Sensor Data</h1>
+    <div id="data">
+        <p>Timestamp: <span id="timestamp"></span></p>
+        <p>ALX: <span id="alx"></span></p>
+        <p>ALY: <span id="aly"></span></p>
+    </div>
+    <script>
+        async function fetchData() {
+            const response = await fetch('/data');
+            const data = await response.json();
+            document.getElementById('timestamp').textContent = data.timestamp;
+            document.getElementById('alx').textContent = data.alx;
+            document.getElementById('aly').textContent = data.aly;
+        }
+
+        setInterval(fetchData, 1000); // Mettre à jour les données toutes les secondes
+    </script>
+</body>
+</html>
